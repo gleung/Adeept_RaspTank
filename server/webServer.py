@@ -17,6 +17,7 @@ import functions
 import robotLight
 import switch
 import socket
+import logging
 
 #websocket
 import asyncio
@@ -25,6 +26,7 @@ import websockets
 import json
 import app
 
+logging.basicConfig(filename='server.log', level=logging.INFO)
 OLED_connection = 1
 try:
     import OLED
@@ -33,7 +35,7 @@ try:
     screen.screen_show(1, 'ADEEPT.COM')
 except:
     OLED_connection = 0
-    print('OLED disconnected')
+    logging.info('OLED disconnected')
     pass
 
 functionMode = 0
@@ -115,7 +117,7 @@ def functionSelect(command_input, response):
             screen.screen_show(5,'SCANNING')
         if modeSelect == 'PT':
             radar_send = fuc.radarScan()
-            print(radar_send)
+            logging.info(radar_send)
             response['title'] = 'scanResult'
             response['data'] = radar_send
             time.sleep(0.3)
@@ -194,7 +196,7 @@ def switchCtrl(command_input, response):
         switch.switch(3,1)
 
     elif 'Switch_3_off' in command_input:
-        switch.switch(3,0) 
+        switch.switch(3,0)
 
 
 def robotCtrl(command_input, response):
@@ -202,7 +204,7 @@ def robotCtrl(command_input, response):
     if 'forward' == command_input:
         direction_command = 'forward'
         move.move(speed_set, 'forward', 'no', rad)
-    
+
     elif 'backward' == command_input:
         direction_command = 'backward'
         move.move(speed_set, 'backward', 'no', rad)
@@ -251,7 +253,7 @@ def robotCtrl(command_input, response):
 
     elif 'handup' == command_input:
         # H1_sc.singleServo(12, 1, 7)
-        
+
         H2_sc.singleServo(13, -1, 7)
 
     elif 'handdown' == command_input:
@@ -265,7 +267,7 @@ def robotCtrl(command_input, response):
 
     elif 'armup' == command_input:
         H1_sc.singleServo(12, 1, 7)
-        
+
         # H2_sc.singleServo(13, 1, 7)
 
     elif 'armdown' == command_input:
@@ -314,7 +316,7 @@ def configPWM(command_input, response):
     elif 'PWM2MS' == command_input:
         init_pwm2 = T_sc.lastPos[2]
         T_sc.initConfig(2,T_sc.lastPos[2],1)
-        print('LLLLLS',T_sc.lastPos[2])
+        logging.info('LLLLLS',T_sc.lastPos[2])
         replace_num('init_pwm2 = ', T_sc.lastPos[2])
 
     elif 'PWM3MS' == command_input:
@@ -328,7 +330,7 @@ def configPWM(command_input, response):
         replace_num('init_pwm4 = ', G_sc.lastPos[4])
 
     elif 'PWMINIT' == command_input:
-        print(init_pwm1)
+        logging.info(init_pwm1)
         servoPosInit()
 
     elif 'PWMD' == command_input:
@@ -354,20 +356,20 @@ def update_code():
     with open(f'{projectPath}/config.json', 'r') as f1:
         config = json.load(f1)
         if not config['production']:
-            print('Update code')
+            logging.info('Update code')
             # Force overwriting local code
             if os.system(f'cd {projectPath} && sudo git fetch --all && sudo git reset --hard origin/master && sudo git pull') == 0:
-                print('Update successfully')
-                print('Restarting...')
+                logging.info('Update successfully')
+                logging.info('Restarting...')
                 os.system('sudo reboot')
-'''   
+'''
 def wifi_check():
     try:
         s =socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
         s.connect(("1.1.1.1",80))
         ipaddr_check=s.getsockname()[0]
         s.close()
-        print(ipaddr_check)
+        logging.info(ipaddr_check)
     #    update_code()
         if OLED_connection:
             screen.screen_show(2, 'IP:'+ipaddr_check)
@@ -421,7 +423,7 @@ async def recv_msg(websocket):
     direction_command = 'no'
     turn_command = 'no'
 
-    while True: 
+    while True:
         response = {
             'status' : 'ok',
             'title' : '',
@@ -433,7 +435,7 @@ async def recv_msg(websocket):
         try:
             data = json.loads(data)
         except Exception as e:
-            print('not A JSON')
+            logging.info('not A JSON')
 
         if not data:
             continue
@@ -508,7 +510,7 @@ async def recv_msg(websocket):
         else:
             pass
 
-        print(data)
+        logging.info(data)
         response = json.dumps(response)
         await websocket.send(response)
 
@@ -521,7 +523,7 @@ if __name__ == '__main__':
     switch.set_all_switch_off()
 
     HOST = ''
-    PORT = 10223                              #Define port serial 
+    PORT = 10223                              #Define port serial
     BUFSIZ = 1024                             #Define buffer size
     ADDR = (HOST, PORT)
 
@@ -534,7 +536,7 @@ if __name__ == '__main__':
         RL.start()
         RL.breath(70,70,255)
     except ModuleNotFoundError as e:
-        print('Use "sudo pip3 install rpi_ws281x" to install WS_281x package\n使用"sudo pip3 install rpi_ws281x"命令来安装rpi_ws281x')
+        logging.info('Use "sudo pip3 install rpi_ws281x" to install WS_281x package\n使用"sudo pip3 install rpi_ws281x"命令来安装rpi_ws281x')
         pass
 
     while  1:
@@ -542,11 +544,11 @@ if __name__ == '__main__':
         try:                  #Start server,waiting for client
             start_server = websockets.serve(main_logic, '0.0.0.0', 8888)
             asyncio.get_event_loop().run_until_complete(start_server)
-            print('waiting for connection...')
-            # print('...connected from :', addr)
+            logging.info('waiting for connection...')
+            # logging.info('...connected from :', addr)
             break
         except Exception as e:
-            print(e)
+            logging.error(e)
             RL.setColor(0,0,0)
 
         try:
@@ -556,6 +558,6 @@ if __name__ == '__main__':
     try:
         asyncio.get_event_loop().run_forever()
     except Exception as e:
-        print(e)
+        logging.error(e)
         RL.setColor(0,0,0)
         move.destroy()
